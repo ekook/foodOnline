@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 
+from vendor.forms import VendorForm
 from .forms import UserForm
-from .models import User
+from .models import User, UserProfile
 
 
 # Create your views here.
@@ -41,3 +42,34 @@ def register_user(request):
     }
 
     return render(request, 'accounts/register_user.html', context)
+
+
+def register_vendor(request):
+    if request.method == 'POST':
+        form = UserForm(request.POST)
+        v_form = VendorForm(request.POST, request.FILES)
+        if form.is_valid() and v_form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
+            user.role = User.VENDOR
+            user.save()
+            vendor = v_form.save(commit=False)
+            vendor.user = user
+            user_profile = UserProfile.objects.get(user=user)
+            vendor.user_profile = user_profile
+            vendor.save()
+            messages.success(request, 'Your account has been registered successfully. Please wait for the approval.')
+            return redirect('accounts:register_vendor')
+        else:
+            print('invalid form')
+            print(form.errors)
+    else:
+        form = UserForm()
+        v_form = VendorForm()
+
+    context = {
+        'form': form,
+        'v_form': v_form,
+    }
+
+    return render(request, 'accounts/register_vendor.html', context)
